@@ -5,8 +5,18 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def auth0Domain = ""
+if (project.hasProperty("dart-defines")) {
+    project.property("dart-defines").split(",").each { encoded ->
+        def decoded = new String(encoded.decodeBase64(), "UTF-8")
+        if (decoded.startsWith("AUTH0_DOMAIN=")) {
+            auth0Domain = decoded.substring("AUTH0_DOMAIN=".length())
+        }
+    }
+}
+
 android {
-    namespace = "com.example.ai_support_mobile"
+    namespace = "com.frankyang.aisupport"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,13 +31,14 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.ai_support_mobile"
+        applicationId = "com.frankyang.aisupport"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders += [auth0Domain: auth0Domain, auth0Scheme: "aisupport"]
     }
 
     buildTypes {

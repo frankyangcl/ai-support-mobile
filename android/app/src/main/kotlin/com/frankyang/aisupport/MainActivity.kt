@@ -1,4 +1,4 @@
-package com.example.ai_support_mobile
+package com.frankyang.aisupport
 
 import io.flutter.embedding.android.FlutterActivity
 
