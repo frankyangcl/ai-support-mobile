@@ -8,6 +8,9 @@ import '../data/unconfigured_auth_repository.dart';
 import '../domain/auth_exception.dart';
 import '../domain/auth_repository.dart';
 import 'auth_state.dart';
+import '../../../core/observability/observability_providers.dart';
+import '../../../core/observability/analytics_service.dart';
+import '../../../core/observability/error_reporting_policy.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final config = ref.watch(appConfigProvider);
@@ -40,7 +43,8 @@ class AuthController extends Notifier<AuthState> {
           : AuthState(status: AuthStatus.authenticated, session: session);
     } on AuthException catch (error) {
       state = AuthState(status: AuthStatus.error, errorMessage: error.message);
-    } catch (_) {
+    } catch (error, stack) {
+      await reportIfUnexpected(ref.read(crashReporterProvider), error, stack, reason: 'Auth session restore');
       state = const AuthState(
         status: AuthStatus.error,
         errorMessage: 'Unable to restore your sign-in session.',
@@ -54,11 +58,13 @@ class AuthController extends Notifier<AuthState> {
     try {
       final session = await ref.read(authRepositoryProvider).login();
       state = AuthState(status: AuthStatus.authenticated, session: session);
+      await ref.read(analyticsServiceProvider).track('login_success');
     } on AuthException catch (error) {
       state = error.type == AuthErrorType.cancelled
           ? const AuthState.unauthenticated()
           : AuthState(status: AuthStatus.error, errorMessage: error.message);
-    } catch (_) {
+    } catch (error, stack) {
+      await reportIfUnexpected(ref.read(crashReporterProvider), error, stack, reason: 'Auth login');
       state = const AuthState(
         status: AuthStatus.error,
         errorMessage: 'Unable to sign in. Please try again.',
@@ -70,6 +76,7 @@ class AuthController extends Notifier<AuthState> {
     try {
       await ref.read(authRepositoryProvider).logout();
       state = const AuthState.unauthenticated();
+      await ref.read(analyticsServiceProvider).track('logout');
     } on AuthException catch (error) {
       state = AuthState(
         status: AuthStatus.error,
@@ -77,5 +84,9 @@ class AuthController extends Notifier<AuthState> {
         errorMessage: error.message,
       );
     }
+  }
+
+  void expireSession() {
+    state = const AuthState.unauthenticated();
   }
 }

@@ -5,6 +5,11 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+    apply plugin: "com.google.firebase.crashlytics"
+}
+
 def auth0Domain = ""
 if (project.hasProperty("dart-defines")) {
     project.property("dart-defines").split(",").each { encoded ->

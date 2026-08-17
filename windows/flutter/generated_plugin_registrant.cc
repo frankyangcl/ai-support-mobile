@@ -7,8 +7,14 @@
 #include "generated_plugin_registrant.h"
 
 #include <auth0_flutter/auth0_flutter_plugin_c_api.h>
+#include <firebase_core/firebase_core_plugin_c_api.h>
+#include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   Auth0FlutterPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("Auth0FlutterPluginCApi"));
+  FirebaseCorePluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FirebaseCorePluginCApi"));
+  UrlLauncherWindowsRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("UrlLauncherWindows"));
 }

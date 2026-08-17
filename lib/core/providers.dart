@@ -25,5 +25,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
         return const <String, String>{};
       }
     },
+    onUnauthorized: () =>
+        ref.read(authControllerProvider.notifier).expireSession(),
   );
 });

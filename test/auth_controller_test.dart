@@ -4,6 +4,8 @@ import 'package:ai_support_mobile/features/auth/domain/auth_session.dart';
 import 'package:ai_support_mobile/features/auth/domain/auth_user.dart';
 import 'package:ai_support_mobile/features/auth/presentation/auth_controller.dart';
 import 'package:ai_support_mobile/features/auth/presentation/auth_state.dart';
+import 'package:ai_support_mobile/core/observability/analytics_service.dart';
+import 'package:ai_support_mobile/core/observability/observability_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,9 +14,9 @@ void main() {
       AuthUser(id: 'auth0|user', name: 'Demo User', email: 'demo@example.com');
   const session = AuthSession(user: user);
 
-  Future<ProviderContainer> containerFor(FakeAuthRepository repository) async {
+  Future<ProviderContainer> containerFor(FakeAuthRepository repository, {RecordingAnalytics? analytics}) async {
     final container = ProviderContainer(
-      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      overrides: [authRepositoryProvider.overrideWithValue(repository), if (analytics != null) analyticsServiceProvider.overrideWithValue(analytics)],
     );
     addTearDown(container.dispose);
     container.read(authControllerProvider);
@@ -35,11 +37,13 @@ void main() {
   });
 
   test('login success stores authenticated session in state', () async {
+    final analytics = RecordingAnalytics();
     final container =
-        await containerFor(FakeAuthRepository(loginResult: session));
+        await containerFor(FakeAuthRepository(loginResult: session), analytics: analytics);
     await container.read(authControllerProvider.notifier).login();
     expect(container.read(authControllerProvider).status,
         AuthStatus.authenticated);
+    expect(analytics.events, ['login_success']);
   });
 
   test('login failure exposes a safe error', () async {
@@ -66,12 +70,23 @@ void main() {
     expect(repository.didLogout, isTrue);
   });
 
+  test('backend authentication expiry returns to login state', () async {
+    final container = await containerFor(FakeAuthRepository(restored: session));
+    container.read(authControllerProvider.notifier).expireSession();
+    expect(container.read(authControllerProvider).status, AuthStatus.unauthenticated);
+  });
+
   test('AuthUser handles optional profile values', () {
     const minimalUser = AuthUser(id: 'auth0|minimal');
     expect(minimalUser.displayName, 'Signed-in user');
     expect(minimalUser.email, isNull);
     expect(user.displayName, 'Demo User');
   });
+}
+
+class RecordingAnalytics implements AnalyticsService {
+  final events = <String>[];
+  @override Future<void> logEvent(String name, {Map<String, Object>? parameters}) async => events.add(name);
 }
 
 class FakeAuthRepository implements AuthRepository {

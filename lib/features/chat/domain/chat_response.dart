@@ -2,9 +2,17 @@ import '../../../core/errors/api_exception.dart';
 import 'citation.dart';
 
 class ChatResponse {
-  const ChatResponse({required this.answer, this.citations = const []});
+  const ChatResponse(
+      {required this.answer,
+      this.citations = const [],
+      this.conversationId,
+      this.userMessageId,
+      this.assistantMessageId});
   final String answer;
   final List<Citation> citations;
+  final String? conversationId;
+  final String? userMessageId;
+  final String? assistantMessageId;
 
   factory ChatResponse.fromJson(Map<String, Object?> json) {
     final answer = json['answer'];
@@ -32,6 +40,21 @@ class ChatResponse {
         }
       }
     }
-    return ChatResponse(answer: answer, citations: citations);
+    return ChatResponse(
+      answer: answer,
+      citations: citations,
+      conversationId: _optionalId(json['conversation_id']),
+      userMessageId: _optionalId(json['user_message_id']),
+      assistantMessageId: _optionalId(json['assistant_message_id']),
+    );
   }
+
+  static String? _optionalId(Object? value) => switch (value) {
+        null => null,
+        int id => '$id',
+        String id when id.isNotEmpty => id,
+        _ => throw const ApiException(
+            'The chat response contains an invalid ID.',
+            type: ApiErrorType.invalidResponse),
+      };
 }
